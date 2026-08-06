@@ -1,0 +1,1475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>Starberry Rush — A Magical Girl Arcade</title>
+<style>
+  :root{
+    --bg-top:#ffe3f1;
+    --bg-mid:#f3d9ff;
+    --bg-bot:#cfe3ff;
+    --accent:#ff5fa2;
+    --accent-2:#9b6bff;
+    --accent-2-rgb:155,107,255;
+    --gold:#e0a520;
+    --gold-glow:#ffcf56;
+    --ink:#4a2b63;
+    --ink-soft:#7a5c96;
+    --panel:rgba(255,246,253,0.86);
+    --panel-border:#ffb8dd;
+    --panel-shadow:rgba(155,90,170,0.35);
+    --heart:#ff5fa2;
+    --heart-empty:rgba(74,43,99,0.18);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg-top:#120a2e;
+      --bg-mid:#1e1145;
+      --bg-bot:#2a1a5e;
+      --ink:#f5e8ff;
+      --ink-soft:#c9b3e8;
+      --panel:rgba(30,17,69,0.82);
+      --panel-border:#6a3fb5;
+      --panel-shadow:rgba(0,0,0,0.55);
+      --heart-empty:rgba(245,232,255,0.16);
+      --gold:#ffcf56;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg-top:#120a2e;
+    --bg-mid:#1e1145;
+    --bg-bot:#2a1a5e;
+    --ink:#f5e8ff;
+    --ink-soft:#c9b3e8;
+    --panel:rgba(30,17,69,0.82);
+    --panel-border:#6a3fb5;
+    --panel-shadow:rgba(0,0,0,0.55);
+    --heart-empty:rgba(245,232,255,0.16);
+    --gold:#ffcf56;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"]{
+    --bg-top:#ffe3f1;
+    --bg-mid:#f3d9ff;
+    --bg-bot:#cfe3ff;
+    --ink:#4a2b63;
+    --ink-soft:#7a5c96;
+    --panel:rgba(255,246,253,0.86);
+    --panel-border:#ffb8dd;
+    --panel-shadow:rgba(155,90,170,0.35);
+    --heart-empty:rgba(74,43,99,0.18);
+    --gold:#e0a520;
+    color-scheme: light;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    overflow:hidden; overscroll-behavior:none;
+    background:var(--bg-mid);
+    font-family:"Trebuchet MS","Segoe UI",Verdana,sans-serif;
+    color:var(--ink);
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  #stage{
+    position:relative;
+    width:100vw; height:100vh;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  #frame{
+    position:relative;
+    width:min(100vw, 177.7vh);
+    height:min(100vh, 56.3vw);
+    max-width:1000px; max-height:720px;
+    aspect-ratio:25/18;
+    border-radius:22px;
+    overflow:hidden;
+    box-shadow:0 25px 70px -20px var(--panel-shadow), 0 0 0 2px var(--panel-border) inset;
+    background:linear-gradient(var(--bg-top), var(--bg-bot));
+  }
+
+  canvas#game{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    display:block;
+    touch-action:none;
+    cursor:none;
+    image-rendering:pixelated;
+    image-rendering:crisp-edges;
+    image-rendering:-moz-crisp-edges;
+  }
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding:14px 18px;
+    pointer-events:none;
+    font-variant-numeric: tabular-nums;
+  }
+  .hud-chip{
+    display:flex; align-items:center; gap:8px;
+    background:var(--panel);
+    border:4px solid var(--panel-border);
+    border-radius:0px;
+    padding:10px 18px;
+    box-shadow:0 6px 0 0 var(--panel-border), inset 0 -4px 0 0 rgba(0,0,0,0.2);
+    backdrop-filter:blur(6px);
+  }
+  #hearts{ gap:6px; }
+  .heart-icon{
+    width:20px; height:18px;
+    position:relative;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,0.15));
+  }
+  .heart-icon svg{ width:100%; height:100%; display:block; }
+
+  #score-wrap{ flex-direction:column; align-items:flex-end; gap:0; padding:6px 16px; }
+  #score-label{ font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-soft); font-weight:900; }
+  #score-val{ font-size:32px; font-weight:900; color:#ff3366; line-height:1.1; text-shadow:0 3px 0 rgba(0,0,0,0.4), 0 0 8px rgba(255,51,102,0.5); }
+  #best-val{ font-size:12px; color:var(--ink); font-weight:800; }
+  #combo{
+    position:absolute; top:64px; right:18px;
+    font-size:13px; font-weight:700; color:var(--gold-glow, var(--gold));
+    text-shadow:0 1px 2px rgba(0,0,0,0.25);
+    opacity:0; transition:opacity .2s ease;
+    pointer-events:none;
+  }
+  #combo.show{ opacity:1; }
+
+  #level-wrap{
+    position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    flex-direction:column; align-items:center; gap:0; padding:6px 18px;
+    pointer-events:none;
+  }
+  #level-label{ font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-soft); }
+  #level-val{
+    font-size:24px; font-weight:900; color:var(--accent-2); line-height:1.1; font-variant-numeric:tabular-nums;
+    text-shadow:0 2px 4px rgba(155,107,255,0.3);
+    letter-spacing:0.05em;
+  }
+  #level-infinity{
+    display:inline-block; font-size:16px; margin-left:4px; opacity:0.8; animation:pulse-infinity 2s ease-in-out infinite;
+  }
+  @keyframes pulse-infinity{
+    0%, 100%{ opacity:0.6; }
+    50%{ opacity:1; }
+  }
+
+  #levelup-toast{
+    position:absolute; top:36%; left:50%;
+    transform:translate(-50%,-46%) scale(0.75);
+    font-size:clamp(22px,5.5vw,36px); font-weight:900;
+    color:var(--gold-glow,var(--gold));
+    text-shadow:0 2px 0 var(--accent-2), 0 6px 18px rgba(255,207,86,0.55);
+    letter-spacing:0.03em; text-align:center; text-wrap:balance;
+    opacity:0; pointer-events:none;
+    transition:opacity .28s ease, transform .28s ease;
+  }
+  #levelup-toast.show{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+
+  #level-val.level-flash{
+    animation:level-flash-anim 0.6s ease-out;
+  }
+  @keyframes level-flash-anim{
+    0%{ transform:scale(0.8); color:var(--gold-glow); text-shadow:0 0 20px rgba(255,207,86,0.8); }
+    50%{ transform:scale(1.15); }
+    100%{ transform:scale(1); color:var(--accent-2); text-shadow:0 2px 4px rgba(155,107,255,0.3); }
+  }
+
+  /* ---------- Overlays ---------- */
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0.08), rgba(0,0,0,0.32));
+    opacity:1; transition:opacity .35s ease;
+  }
+  .overlay.hidden{ opacity:0; pointer-events:none; }
+
+  .panel{
+    width:min(86%, 420px);
+    background:var(--panel);
+    border:6px solid var(--panel-border);
+    border-radius:0px;
+    padding:32px 30px 28px;
+    text-align:center;
+    box-shadow:0 12px 0 0 var(--panel-border), inset 0 -6px 0 0 rgba(0,0,0,0.25);
+    backdrop-filter:blur(8px);
+  }
+
+  .title{
+    margin:0 0 10px;
+    font-size:clamp(32px,7vw,56px);
+    font-weight:900;
+    letter-spacing:0.06em;
+    line-height:1.05;
+    background:linear-gradient(180deg, #ffff00 0%, #ffdd00 45%, #ff6b9d 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:
+      0 4px 0 #4a0020,
+      4px 5px 0 #4a0020,
+      -2px 4px 0 #4a0020,
+      0 10px 20px rgba(74,0,32,0.7);
+    text-wrap:balance;
+    filter:drop-shadow(3px 3px 0 #8b0043) drop-shadow(-1px -1px 0 #ff3333);
+  }
+  .subtitle{
+    margin:0 0 24px;
+    font-size:15px;
+    color:var(--ink);
+    line-height:1.7;
+    text-wrap:balance;
+    font-weight:700;
+    letter-spacing:0.02em;
+  }
+
+  .btn{
+    appearance:none; border:none; cursor:pointer;
+    font-family:"Trebuchet MS","Segoe UI",monospace; font-weight:900; font-size:16px;
+    letter-spacing:0.08em;
+    color:#ffff00;
+    padding:16px 40px;
+    border-radius:0px;
+    background:linear-gradient(180deg, #ff3366, #bb0055);
+    box-shadow:inset 0 -6px 0 0 #550033, 0 10px 0 0 #550033, 0 12px 20px -8px rgba(85,0,51,0.9);
+    border:4px solid #330011;
+    transition:transform .08s ease, box-shadow .08s ease;
+    image-rendering:pixelated;
+    text-shadow:0 2px 4px rgba(0,0,0,0.6);
+  }
+  .btn:hover{
+    background:linear-gradient(180deg, #ff5588, #d41a7f);
+    color:#ffff88;
+  }
+  .btn:active{ transform:translateY(8px); box-shadow:inset 0 -2px 0 0 #550033, 0 2px 0 0 #550033, 0 4px 8px -6px rgba(85,0,51,0.8); }
+  .btn:focus-visible{ outline:3px solid var(--gold-glow,var(--gold)); outline-offset:3px; }
+
+  .hint{
+    margin-top:16px;
+    font-size:13px;
+    color:var(--ink);
+    display:flex; flex-direction:column; gap:5px;
+    font-weight:600;
+  }
+  .hint b{ color:#ff6b9d; font-weight:900; }
+
+  .legend{
+    display:flex; justify-content:center; gap:18px;
+    margin:14px 0 4px;
+    font-size:12px; color:var(--ink); font-weight:700;
+  }
+  .legend-item{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .legend-item svg{ width:28px; height:28px; filter:drop-shadow(0 3px 5px rgba(0,0,0,0.3)); }
+
+  .score-row{
+    display:flex; justify-content:center; gap:26px;
+    margin:14px 0 6px;
+  }
+  .score-row div{ text-align:center; }
+  .score-row .num{ font-size:32px; font-weight:900; color:#ff6b9d; font-variant-numeric:tabular-nums; text-shadow:0 2px 4px rgba(0,0,0,0.3); }
+  .score-row .lab{ font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink); font-weight:800; }
+  .newbest{
+    display:inline-block; margin-top:6px; font-size:13px; font-weight:900;
+    color:#fff; background:#ff6b9d; border-radius:6px; padding:4px 14px; border:2px solid #8b0043;
+  }
+
+  #pause-panel{ padding:20px 30px; }
+
+  .footer-hint{
+    position:absolute; bottom:10px; left:0; right:0;
+    text-align:center; font-size:12px; color:var(--ink); font-weight:700;
+    opacity:0.85; pointer-events:none;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+
+  #restart-toggle{
+    position:absolute; bottom:12px; right:110px;
+    width:48px; height:48px; border-radius:0px;
+    background:var(--panel); border:4px solid var(--panel-border);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:22px; color:var(--ink);
+    box-shadow:0 6px 0 0 var(--panel-border), inset 0 -3px 0 0 rgba(0,0,0,0.2);
+    pointer-events:auto;
+    transition:transform 0.08s ease, box-shadow 0.08s ease;
+    font-weight:bold;
+  }
+  #restart-toggle:active{
+    transform:translateY(4px);
+    box-shadow:0 2px 0 0 var(--panel-border), inset 0 -2px 0 0 rgba(0,0,0,0.2);
+  }
+
+  #pause-toggle{
+    position:absolute; bottom:12px; right:62px;
+    width:48px; height:48px; border-radius:0px;
+    background:var(--panel); border:4px solid var(--panel-border);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:20px; color:var(--ink);
+    box-shadow:0 6px 0 0 var(--panel-border), inset 0 -3px 0 0 rgba(0,0,0,0.2);
+    pointer-events:auto;
+    transition:transform 0.08s ease, box-shadow 0.08s ease;
+    font-weight:bold;
+  }
+  #pause-toggle:active{
+    transform:translateY(4px);
+    box-shadow:0 2px 0 0 var(--panel-border), inset 0 -2px 0 0 rgba(0,0,0,0.2);
+  }
+
+  #sound-toggle{
+    position:absolute; bottom:12px; right:14px;
+    width:48px; height:48px; border-radius:0px;
+    background:var(--panel); border:4px solid var(--panel-border);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:20px; color:var(--ink);
+    box-shadow:0 6px 0 0 var(--panel-border), inset 0 -3px 0 0 rgba(0,0,0,0.2);
+    pointer-events:auto;
+    transition:transform 0.08s ease, box-shadow 0.08s ease;
+    font-weight:bold;
+  }
+  #sound-toggle:active{
+    transform:translateY(4px);
+    box-shadow:0 2px 0 0 var(--panel-border), inset 0 -2px 0 0 rgba(0,0,0,0.2);
+  }
+
+  #settings-toggle{
+    position:absolute; bottom:12px; left:14px;
+    width:48px; height:48px; border-radius:0px;
+    background:var(--panel); border:4px solid var(--panel-border);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:22px; color:var(--ink);
+    box-shadow:0 6px 0 0 var(--panel-border), inset 0 -3px 0 0 rgba(0,0,0,0.2);
+    pointer-events:auto;
+    transition:transform 0.08s ease, box-shadow 0.08s ease;
+    font-weight:bold;
+  }
+  #settings-toggle:active{
+    transform:translateY(4px);
+    box-shadow:0 2px 0 0 var(--panel-border), inset 0 -2px 0 0 rgba(0,0,0,0.2);
+  }
+
+  .skin-btn{
+    appearance:none; border:none; cursor:pointer;
+    font-family:"Trebuchet MS","Segoe UI",monospace; font-weight:900; font-size:14px;
+    letter-spacing:0.06em;
+    color:#ffff00;
+    padding:14px 20px;
+    border-radius:0px;
+    background:linear-gradient(180deg, #ff3366, #bb0055);
+    box-shadow:inset 0 -4px 0 0 #550033, 0 8px 0 0 #550033;
+    border:3px solid #330011;
+    transition:transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+    image-rendering:pixelated;
+    text-shadow:0 2px 4px rgba(0,0,0,0.6);
+  }
+  .skin-btn:hover{
+    background:linear-gradient(180deg, #ff5588, #d41a7f);
+    color:#ffff88;
+  }
+  .skin-btn:active{ transform:translateY(4px); box-shadow:inset 0 -2px 0 0 #550033, 0 2px 0 0 #550033; }
+  .skin-btn.selected{
+    background:linear-gradient(180deg, #ffff00, #ffcc00);
+    color:#000;
+    box-shadow:inset 0 -4px 0 0 #ccaa00, 0 8px 0 0 #ccaa00, 0 0 16px rgba(255,255,0,0.6);
+  }
+</style>
+</head>
+<body>
+<audio id="bgm" loop style="display:none;">
+  <source src="https://downloads.khinsider.com/game-soundtracks/album/magical-girl-witch-trials-complete-original-soundtrack-2025/1-01.%20LaVI-Bavellabion.mp3" type="audio/mpeg">
+</audio>
+<div id="stage">
+  <div id="frame">
+    <canvas id="game"></canvas>
+
+    <div id="hud">
+      <div class="hud-chip" id="hearts"></div>
+      <div class="hud-chip" id="level-wrap">
+        <div id="level-label">∞ Infinite Levels ∞</div>
+        <div id="level-val">1<span id="level-infinity">∞</span></div>
+      </div>
+      <div class="hud-chip" id="score-wrap">
+        <div id="score-label">Magic Points</div>
+        <div id="score-val">0</div>
+        <div id="best-val">Best 0</div>
+      </div>
+    </div>
+    <div id="combo"></div>
+    <div id="levelup-toast"></div>
+
+    <!-- Start screen -->
+    <div class="overlay" id="start-overlay">
+      <div class="panel">
+        <h1 class="title">STARBERRY RUSH</h1>
+        <p class="subtitle">Annabelle channels the magic of love &amp; fire to gather moonlit fruit for her charm.<br>Dodge the rival witch's cursed potions, or the spell breaks.</p>
+        <div class="legend">
+          <div class="legend-item">
+            <svg viewBox="0 0 40 40"><circle cx="20" cy="24" r="13" fill="#ff5f6d"/><path d="M20 12c2-4 7-5 9-2" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+            Collect fruit
+          </div>
+          <div class="legend-item">
+            <svg viewBox="0 0 40 40"><path d="M16 8h8v6l4 4v16a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V18l4-4V8z" fill="#8b5fd6"/><rect x="15" y="6" width="10" height="4" rx="1.5" fill="#5b3a91"/><circle cx="20" cy="26" r="3" fill="#c9f27a"/></svg>
+            Avoid potions
+          </div>
+          <div class="legend-item">
+            <svg viewBox="0 0 40 40"><path d="M20 4l4.5 10.5L35 16l-8 8 2 11-9-5.5L11 35l2-11-8-8 10.5-1.5z" fill="#ffcf56"/></svg>
+            Grab stars = shield
+          </div>
+        </div>
+        <button class="btn" id="start-btn">Begin the Spell</button>
+        <div class="hint">
+          <span><b>Move:</b> Arrow keys / WASD, or click-drag &amp; touch-drag</span>
+          <span><b>Pause:</b> P or Esc</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game over screen -->
+    <div class="overlay hidden" id="gameover-overlay">
+      <div class="panel">
+        <h1 class="title" style="font-size:clamp(24px,5vw,34px)">THE CURSE TOOK HOLD</h1>
+        <p class="subtitle" id="gameover-line">Annabelle's flame flickered out...</p>
+        <div class="score-row">
+          <div><div class="num" id="final-score">0</div><div class="lab">Magic Points</div></div>
+          <div><div class="num" id="final-level">1</div><div class="lab">Level Reached</div></div>
+          <div><div class="num" id="final-best">0</div><div class="lab">Best Ever</div></div>
+        </div>
+        <div id="newbest-badge" style="display:none"><span class="newbest">✦ New Best!</span></div>
+        <button class="btn" id="retry-btn" style="margin-top:10px">Try Again</button>
+      </div>
+    </div>
+
+    <!-- Pause screen -->
+    <div class="overlay hidden" id="pause-overlay">
+      <div class="panel" id="pause-panel">
+        <h1 class="title" style="font-size:28px">PAUSED</h1>
+        <p class="subtitle">The moon waits for you.</p>
+        <button class="btn" id="resume-btn">Resume</button>
+      </div>
+    </div>
+
+    <!-- Settings screen -->
+    <div class="overlay hidden" id="settings-overlay">
+      <div class="panel" id="settings-panel">
+        <h1 class="title" style="font-size:32px">SKINS</h1>
+        <p class="subtitle">Choose your character</p>
+        <div id="skins-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin:20px 0; padding:0 10px;">
+          <button class="skin-btn" data-skin="character.png">Char 1</button>
+          <button class="skin-btn" data-skin="1.png">Char 2</button>
+          <button class="skin-btn" data-skin="2.png">Char 3</button>
+          <button class="skin-btn" data-skin="3.png">Char 4</button>
+        </div>
+        <button class="btn" id="close-settings-btn">Back</button>
+      </div>
+    </div>
+
+    <div class="footer-hint" id="footer-hint">Collect fruit for points &middot; touching a potion costs a charm heart</div>
+    <div id="settings-toggle" title="Skins">⚙</div>
+    <div id="restart-toggle" title="Restart game">🔄</div>
+    <div id="pause-toggle" title="Pause game">⏸</div>
+    <div id="sound-toggle" title="Toggle sound">🔊</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------------------------------------------------------
+  // Setup
+  // ---------------------------------------------------------------
+  const frame = document.getElementById('frame');
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  let DPR = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+  let W = 0, H = 0; // CSS pixel size
+  const PIXEL_SIZE = 4; // Pixelation block size - retro arcade effect
+
+  function resize(){
+    const rect = frame.getBoundingClientRect();
+    W = rect.width; H = rect.height;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    if(player){
+      player.x = Math.min(player.x, W-30); player.y = Math.min(player.y, H-30);
+    }
+    if(!W || !H) console.warn('Canvas size issue:', W, H);
+  }
+  window.addEventListener('resize', resize);
+
+  // ---------------------------------------------------------------
+  // Audio (WebAudio synth, no assets)
+  // ---------------------------------------------------------------
+  let actx = null, soundOn = true;
+  const bgmElement = document.getElementById('bgm');
+
+  function ensureAudio(){
+    if(!actx){
+      try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ actx=null; }
+    }
+    if(actx && actx.state === 'suspended') actx.resume();
+    // Try to play BGM
+    if(bgmElement && soundOn){
+      bgmElement.play().catch(()=>{});
+    }
+  }
+  function blip(freqStart, freqEnd, dur, type, vol){
+    if(!soundOn || !actx) return;
+    const t0 = actx.currentTime;
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freqStart, t0);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20,freqEnd), t0+dur);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol||0.18, t0+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    osc.connect(gain).connect(actx.destination);
+    osc.start(t0); osc.stop(t0+dur+0.02);
+  }
+  const sfx = {
+    collect: (pitch)=> blip(520+pitch*40, 900+pitch*40, 0.16, 'triangle', 0.15),
+    hurt: ()=> { blip(220,80,0.28,'sawtooth',0.2); },
+    star: ()=> { blip(400,1200,0.4,'sine',0.2); setTimeout(()=>blip(600,1500,0.3,'sine',0.15),90); },
+    gameover: ()=> { blip(300,60,0.7,'sawtooth',0.18); },
+    start: ()=> { blip(400,700,0.25,'triangle',0.15); }
+  };
+  document.getElementById('sound-toggle').addEventListener('click', ()=>{
+    soundOn = !soundOn;
+    document.getElementById('sound-toggle').textContent = soundOn ? '🔊' : '🔇';
+    if(bgmElement){
+      bgmElement.muted = !soundOn;
+      if(soundOn){
+        bgmElement.play().catch(()=>{});
+      } else {
+        bgmElement.pause();
+      }
+    }
+    ensureAudio();
+  });
+
+  // ---------------------------------------------------------------
+  // High score & Skins
+  // ---------------------------------------------------------------
+  let bestScore = 0;
+  try{ bestScore = parseInt(localStorage.getItem('starberryRushBest')||'0',10) || 0; }catch(e){ bestScore = 0; }
+  function saveBest(v){
+    bestScore = v;
+    try{ localStorage.setItem('starberryRushBest', String(v)); }catch(e){ /* storage unavailable */ }
+  }
+
+  let selectedSkin = 'character.png';
+  try{ selectedSkin = localStorage.getItem('starberryRushSkin') || 'character.png'; }catch(e){ selectedSkin = 'character.png'; }
+  function saveSkin(skin){
+    selectedSkin = skin;
+    try{ localStorage.setItem('starberryRushSkin', skin); }catch(e){ /* storage unavailable */ }
+    // Create a completely new Image object to force reload
+    spriteImg = new Image();
+    spriteLoaded = false;
+    spriteImg.onload = ()=>{
+      spriteLoaded = true;
+      SPRITE_WIDTH_ACTUAL = spriteImg.width;
+      SPRITE_HEIGHT_ACTUAL = spriteImg.height;
+      console.log(`✓ Character loaded! Dimensions: ${spriteImg.width}x${spriteImg.height}`);
+    };
+    spriteImg.onerror = ()=>{
+      console.error('✗ Character failed to load from:', selectedSkin);
+      console.error('Check that the file exists and is a valid image');
+    };
+    spriteImg.src = selectedSkin;
+  }
+
+  // ---------------------------------------------------------------
+  // Game state
+  // ---------------------------------------------------------------
+  const STATE = { START:'start', PLAY:'play', PAUSE:'pause', OVER:'over' };
+  let state = STATE.START;
+  let score = 0, lives = 3, streak = 0, elapsed = 0, spawnTimer = 0, difficultyT = 0, level = 1;
+
+  function levelForScore(s){
+    let lvl=1, total=0, need=150;
+    while(s >= total+need){ total += need; lvl++; need += 70; }
+    return lvl;
+  }
+  let levelUpTimer=null;
+  function checkLevelUp(){
+    const newLevel = levelForScore(score);
+    if(newLevel > level){
+      level = newLevel;
+      const toast = document.getElementById('levelup-toast');
+      const levelValEl = document.getElementById('level-val');
+      const lines = ['New Charms Unlocked','The Witch Grows Bolder','Moonlight Intensifies','The Rush Quickens'];
+      toast.innerHTML = `LEVEL ${level}<br><span style="font-size:0.42em;font-weight:700;letter-spacing:0.08em;">${lines[(level-2)%lines.length]}</span>`;
+      toast.classList.add('show');
+      levelValEl.classList.add('level-flash');
+      clearTimeout(levelUpTimer);
+      levelUpTimer = setTimeout(()=>{
+        toast.classList.remove('show');
+        levelValEl.classList.remove('level-flash');
+      }, 1400);
+      sfx.star();
+    }
+  }
+  let ambientT = 0;
+
+  const player = { x:0,y:0, vx:0, vy:0, r:22, invuln:0, hitFlash:0, shield:0, facing:1, bob:0, dying:0 };
+
+  let items = []; // fruits, potions, stars falling
+  let particles = [];
+
+  // input
+  const keys = {};
+  let pointerActive = false, pointerX=0, pointerY=0;
+
+  window.addEventListener('keydown', (e)=>{
+    const k = e.key.toLowerCase();
+    if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+    keys[k] = true;
+    if(k==='p' || k==='escape'){ togglePause(); }
+    if((k===' '||k==='enter')){
+      if(state===STATE.START) startGame();
+      else if(state===STATE.OVER) startGame();
+    }
+  });
+  window.addEventListener('keyup', (e)=>{ keys[e.key.toLowerCase()] = false; });
+
+  function relPos(clientX, clientY){
+    const rect = canvas.getBoundingClientRect();
+    return { x: clientX-rect.left, y: clientY-rect.top };
+  }
+  canvas.addEventListener('mousedown', (e)=>{ pointerActive=true; const p=relPos(e.clientX,e.clientY); pointerX=p.x; pointerY=p.y; });
+  window.addEventListener('mouseup', ()=>{ pointerActive=false; });
+  window.addEventListener('mousemove', (e)=>{ if(pointerActive){ const p=relPos(e.clientX,e.clientY); pointerX=p.x; pointerY=p.y; } });
+  canvas.addEventListener('touchstart', (e)=>{
+    pointerActive=true; ensureAudio();
+    const t=e.changedTouches[0]; const p=relPos(t.clientX,t.clientY); pointerX=p.x; pointerY=p.y;
+    e.preventDefault();
+  }, {passive:false});
+  canvas.addEventListener('touchmove', (e)=>{
+    const t=e.changedTouches[0]; const p=relPos(t.clientX,t.clientY); pointerX=p.x; pointerY=p.y;
+    e.preventDefault();
+  }, {passive:false});
+  canvas.addEventListener('touchend', ()=>{ pointerActive=false; }, {passive:true});
+
+  document.getElementById('start-btn').addEventListener('click', ()=>{ ensureAudio(); startGame(); });
+  document.getElementById('retry-btn').addEventListener('click', ()=>{ ensureAudio(); startGame(); });
+  document.getElementById('resume-btn').addEventListener('click', ()=>{ togglePause(); });
+  document.getElementById('pause-toggle').addEventListener('click', ()=>{ if(state===STATE.PLAY || state===STATE.PAUSE) togglePause(); });
+  document.getElementById('restart-toggle').addEventListener('click', ()=>{ if(state===STATE.PLAY || state===STATE.PAUSE) { ensureAudio(); startGame(); } });
+  document.getElementById('settings-toggle').addEventListener('click', ()=>{ if(state===STATE.START || state===STATE.PLAY || state===STATE.PAUSE) toggleSettings(); });
+  document.getElementById('close-settings-btn').addEventListener('click', ()=>{ toggleSettings(); });
+  document.querySelectorAll('.skin-btn').forEach(btn => {
+    btn.addEventListener('click', ()=>{ saveSkin(btn.dataset.skin); updateSkinButtons(); });
+  });
+
+  function togglePause(){
+    if(state===STATE.PLAY){ state=STATE.PAUSE; show('pause-overlay'); }
+    else if(state===STATE.PAUSE){ state=STATE.PLAY; hide('pause-overlay'); }
+  }
+  function show(id){ document.getElementById(id).classList.remove('hidden'); }
+  function hide(id){ document.getElementById(id).classList.add('hidden'); }
+
+  function toggleSettings(){
+    const overlay = document.getElementById('settings-overlay');
+    if(overlay.classList.contains('hidden')){
+      show('settings-overlay');
+      updateSkinButtons();
+    } else {
+      hide('settings-overlay');
+    }
+  }
+
+  function updateSkinButtons(){
+    document.querySelectorAll('.skin-btn').forEach(btn => {
+      if(btn.dataset.skin === selectedSkin){
+        btn.classList.add('selected');
+      } else {
+        btn.classList.remove('selected');
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // Entity factories
+  // ---------------------------------------------------------------
+  const FRUITS = [
+    { kind:'strawberry', points:10, r:14, weight:30 },
+    { kind:'apple',      points:15, r:15, weight:24 },
+    { kind:'peach',      points:20, r:15, weight:18 },
+    { kind:'grapes',     points:25, r:16, weight:14 },
+    { kind:'golden',     points:60, r:16, weight:4  },
+  ];
+  const totalFruitWeight = FRUITS.reduce((s,f)=>s+f.weight,0);
+
+  function pickFruit(){
+    let r = Math.random()*totalFruitWeight;
+    for(const f of FRUITS){ if(r<f.weight) return f; r-=f.weight; }
+    return FRUITS[0];
+  }
+
+  function spawnItem(){
+    const roll = Math.random();
+    const baseSpeed = 55 + Math.min(90, difficultyT*10);
+    const levelMultiplier = 1 + (level-1)*0.15; // Level scaling - 15% faster per level
+    const speed = baseSpeed * levelMultiplier;
+    let type;
+    if(roll < 0.20){ type='potion'; }
+    else if(roll < 0.24){ type='star'; }
+    else { type='fruit'; }
+
+    const x = 30 + Math.random()*(W-60);
+    const base = { x, y:-30, vx:(Math.random()-0.5)*18, rot:Math.random()*Math.PI*2, rotSpeed:(Math.random()-0.5)*1.6, wobble:Math.random()*Math.PI*2 };
+
+    if(type==='fruit'){
+      const f = pickFruit();
+      const randomFruitVisual = Math.floor(Math.random() * 10); // Pick random fruit sprite from 10 available
+      items.push(Object.assign(base, { type:'fruit', kind:f.kind, points:f.points, r:f.r, vy: speed*(0.85+Math.random()*0.3), visualIndex: randomFruitVisual }));
+    } else if(type==='potion'){
+      const green = Math.random()<0.5;
+      items.push(Object.assign(base, { type:'potion', kind: green?'green':'purple', r:16, vy: speed*(0.9+Math.random()*0.35) }));
+    } else {
+      items.push(Object.assign(base, { type:'star', r:17, vy: speed*0.75 }));
+    }
+  }
+
+  function spawnParticles(x,y,n,colors,opts){
+    opts = opts||{};
+    for(let i=0;i<n;i++){
+      const a = Math.random()*Math.PI*2;
+      const sp = (opts.speed||60) * (0.4+Math.random()*0.9);
+      particles.push({
+        x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - (opts.lift||0),
+        life:0, maxLife:(opts.life||0.6)*(0.7+Math.random()*0.6),
+        size:(opts.size||4)*(0.6+Math.random()*0.8),
+        color: colors[(Math.random()*colors.length)|0],
+        shape: opts.shape||'star',
+        rot: Math.random()*Math.PI*2, rotSpeed:(Math.random()-0.5)*6,
+        grav: opts.grav||0
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Game flow
+  // ---------------------------------------------------------------
+  function startGame(){
+    ensureAudio();
+    if(bgmElement && soundOn){
+      bgmElement.currentTime = 0;
+      bgmElement.play().catch(()=>{});
+    }
+    score=0; lives=3; streak=0; elapsed=0; spawnTimer=0; difficultyT=0; level=1;
+    items=[]; particles=[];
+    document.getElementById('levelup-toast').classList.remove('show');
+    player.x=W/2; player.y=H*0.65; player.vx=0; player.vy=0; player.invuln=1.2; player.shield=0; player.dying=0;
+    state = STATE.PLAY;
+    hide('start-overlay'); hide('gameover-overlay'); hide('pause-overlay');
+    updateHUD();
+    sfx.start();
+  }
+
+  function loseLife(){
+    if(player.invuln>0 || player.dying>0) return;
+    lives -= 1;
+    streak = 0;
+    player.invuln = 1.4;
+    player.hitFlash = 0.35;
+    sfx.hurt();
+    spawnParticles(player.x, player.y, 14, ['#5b2a86','#8b5fd6','#2f1550'], {speed:90, life:0.5, shape:'poof', size:6});
+    updateHUD();
+    if(lives<=0){
+      player.dying = 1.0;
+      state = STATE.OVER; // items freeze visually via dying flag check in update
+      setTimeout(endGame, 900);
+    }
+  }
+
+  function endGame(){
+    sfx.gameover();
+    const best = Math.max(bestScore, score);
+    const isNew = score>bestScore && score>0;
+    if(isNew) saveBest(score);
+    document.getElementById('final-score').textContent = score;
+    document.getElementById('final-level').textContent = level;
+    document.getElementById('final-best').textContent = best;
+    document.getElementById('newbest-badge').style.display = isNew ? 'block' : 'none';
+    document.getElementById('gameover-line').textContent = pickGameOverLine();
+    show('gameover-overlay');
+  }
+
+  function pickGameOverLine(){
+    const lines = [
+      "Annabelle's flame flickered out...",
+      "The rival witch's potion doused her fire.",
+      "Even a heart full of love needs quick feet.",
+      "Her moonlit magic faded too soon.",
+    ];
+    return lines[(Math.random()*lines.length)|0];
+  }
+
+  function updateHUD(){
+    const heartsEl = document.getElementById('hearts');
+    heartsEl.innerHTML = '';
+    for(let i=0;i<3;i++){
+      const filled = i<lives;
+      const span = document.createElement('span');
+      span.className='heart-icon';
+      span.innerHTML = `<svg viewBox="0 0 32 29"><path d="M16 28C4 20 0 13 0 8.5A8.5 8.5 0 0 1 16 4a8.5 8.5 0 0 1 16 4.5C32 13 28 20 16 28z" fill="${filled? 'var(--heart)':'var(--heart-empty)'}"/></svg>`;
+      heartsEl.appendChild(span);
+    }
+    document.getElementById('score-val').textContent = score;
+    document.getElementById('best-val').textContent = 'Best ' + Math.max(bestScore, score);
+    document.getElementById('level-val').innerHTML = level + '<span id="level-infinity">∞</span>';
+  }
+
+  // ---------------------------------------------------------------
+  // Update
+  // ---------------------------------------------------------------
+  function updatePlayer(dt){
+    if(player.dying>0){
+      player.dying = Math.max(0, player.dying - dt/0.9);
+      return;
+    }
+    const speed = 812; // 40% faster (580 * 1.4)
+    let ax=0, ay=0;
+    const usingKeys = keys['arrowleft']||keys['arrowright']||keys['arrowup']||keys['arrowdown']||keys['a']||keys['d']||keys['w']||keys['s'];
+    if(usingKeys){
+      if(keys['arrowleft']||keys['a']) ax -= 1;
+      if(keys['arrowright']||keys['d']) ax += 1;
+      if(keys['arrowup']||keys['w']) ay -= 1;
+      if(keys['arrowdown']||keys['s']) ay += 1;
+      const len = Math.hypot(ax,ay)||1;
+      player.vx += (ax/len)*speed*dt*4;
+      player.vy += (ay/len)*speed*dt*4;
+    } else if(pointerActive){
+      const dx = pointerX-player.x, dy = pointerY-player.y;
+      player.vx += dx*8*dt;
+      player.vy += dy*8*dt;
+    }
+    // friction
+    const fr = usingKeys ? 0.84 : 0.78;
+    player.vx *= Math.pow(fr, dt*60);
+    player.vy *= Math.pow(fr, dt*60);
+    const sp = Math.hypot(player.vx,player.vy);
+    const maxSp = 910; // 40% faster (650 * 1.4)
+    if(sp>maxSp){ player.vx = player.vx/sp*maxSp; player.vy = player.vy/sp*maxSp; }
+
+    player.x += player.vx*dt;
+    player.y += player.vy*dt;
+    player.x = Math.max(player.r, Math.min(W-player.r, player.x));
+    player.y = Math.max(player.r+10, Math.min(H-player.r-6, player.y));
+
+    if(player.vx>8) player.facing=1; else if(player.vx<-8) player.facing=-1;
+
+    // Animate sprite frames based on speed
+    if(sp > 10){
+      spriteFrameIndex += dt * 12; // Animate at 12 fps
+      if(spriteFrameIndex >= SPRITE_FRAMES) spriteFrameIndex = 0;
+    } else {
+      spriteFrameIndex = 0; // Reset to idle frame
+    }
+
+    if(player.invuln>0) player.invuln = Math.max(0, player.invuln-dt);
+    if(player.hitFlash>0) player.hitFlash = Math.max(0, player.hitFlash-dt);
+    if(player.shield>0) player.shield = Math.max(0, player.shield-dt);
+    player.bob += dt;
+  }
+
+  function updateItems(dt){
+    for(let i=items.length-1;i>=0;i--){
+      const it = items[i];
+      it.y += it.vy*dt;
+      it.wobble += dt*2.2;
+      it.x += Math.sin(it.wobble)* (10*dt);
+      it.rot += it.rotSpeed*dt;
+
+      if(it.y - it.r > H+10){ items.splice(i,1); continue; }
+
+      if(player.dying<=0){
+        const dx = it.x-player.x, dy = it.y-player.y;
+        const dist = Math.hypot(dx,dy);
+        if(dist < it.r+player.r-6){
+          if(it.type==='fruit'){
+            streak += 1;
+            const mult = 1 + Math.min(2, Math.floor(streak/6)*0.5);
+            const gained = Math.round(it.points*mult);
+            score += gained;
+            sfx.collect(Math.min(streak,10));
+            spawnParticles(it.x,it.y,10,['#ff5fa2','#ffcf56','#9b6bff','#ffffff'],{speed:80,life:0.55,shape:'star',size:5,lift:20});
+            showCombo(mult);
+            checkLevelUp();
+            updateHUD();
+            items.splice(i,1);
+          } else if(it.type==='star'){
+            player.shield = 4.5;
+            sfx.star();
+            spawnParticles(it.x,it.y,18,['#ffcf56','#fff5b0','#ffffff'],{speed:110,life:0.7,shape:'star',size:6,lift:10});
+            items.splice(i,1);
+          } else if(it.type==='potion'){
+            if(player.shield>0){
+              score += 30;
+              spawnParticles(it.x,it.y,16,['#ffcf56','#ff5fa2','#ffffff'],{speed:120,life:0.6,shape:'star',size:5});
+              checkLevelUp();
+              updateHUD();
+              items.splice(i,1);
+            } else if(player.invuln<=0){
+              spawnParticles(it.x,it.y,10,['#5b2a86','#8b5fd6'],{speed:70,life:0.5,shape:'poof',size:5});
+              items.splice(i,1);
+              loseLife();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  let comboTimer=null;
+  function showCombo(mult){
+    const el = document.getElementById('combo');
+    if(mult>1){
+      el.textContent = 'x'+mult.toFixed(1)+' streak!';
+      el.classList.add('show');
+      clearTimeout(comboTimer);
+      comboTimer = setTimeout(()=>el.classList.remove('show'), 700);
+    }
+  }
+
+  function updateParticles(dt){
+    for(let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.life += dt;
+      if(p.life>=p.maxLife){ particles.splice(i,1); continue; }
+      p.vy += (p.grav||0)*dt;
+      p.x += p.vx*dt; p.y += p.vy*dt;
+      p.rot += p.rotSpeed*dt;
+    }
+  }
+
+  function update(dt){
+    ambientT += dt;
+    if(state!==STATE.PLAY){
+      updateParticles(dt);
+      if(player.dying>0) updatePlayer(dt);
+      return;
+    }
+    elapsed += dt; difficultyT += dt;
+    spawnTimer -= dt;
+    const levelSpawnBoost = 1 + (level-1)*0.18; // Items spawn faster at higher levels
+    const interval = Math.max(0.2, (1.15 - difficultyT*0.012) / (1 + (level-1)*0.15)) / levelSpawnBoost;
+    if(spawnTimer<=0){ spawnItem(); spawnTimer = interval * (0.8+Math.random()*0.4); }
+
+    updatePlayer(dt);
+    updateItems(dt);
+    updateParticles(dt);
+  }
+
+  // ---------------------------------------------------------------
+  // Drawing
+  // ---------------------------------------------------------------
+  function isDark(){
+    const el = document.documentElement;
+    if(el.getAttribute('data-theme')==='dark') return true;
+    if(el.getAttribute('data-theme')==='light') return false;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  let spriteImg = new Image();
+  let spriteLoaded = false;
+  let SPRITE_WIDTH_ACTUAL = 40;
+  let SPRITE_HEIGHT_ACTUAL = 50;
+
+  spriteImg.onload = ()=>{
+    spriteLoaded = true;
+    SPRITE_WIDTH_ACTUAL = spriteImg.width;
+    SPRITE_HEIGHT_ACTUAL = spriteImg.height;
+    console.log(`✓ Character loaded! Dimensions: ${spriteImg.width}x${spriteImg.height}`);
+  };
+
+  spriteImg.onerror = ()=>{
+    console.error('✗ Character failed to load from:', selectedSkin);
+    console.error('Check that the file exists and is a valid image');
+  };
+
+  spriteImg.onabort = ()=>{
+    console.error('✗ Character load aborted:', selectedSkin);
+  };
+
+  spriteImg.src = selectedSkin;
+  console.log('Loading character from:', selectedSkin);
+
+  let fruitsImg = new Image();
+  let fruitsLoaded = false;
+  let FRUIT_SPRITE_WIDTH_ACTUAL = 32;
+  let FRUIT_SPRITE_HEIGHT_ACTUAL = 32;
+
+  fruitsImg.onload = ()=>{
+    fruitsLoaded = true;
+    // Auto-detect fruit sprite dimensions (5 wide x 2 tall = 10 fruits)
+    FRUIT_SPRITE_WIDTH_ACTUAL = fruitsImg.width / 5;
+    FRUIT_SPRITE_HEIGHT_ACTUAL = fruitsImg.height / 2;
+    console.log(`✓ Fruits loaded! 10 different fruits available`);
+  };
+
+  fruitsImg.onerror = ()=>{
+    console.error('✗ Fruits failed to load from: yumyum.png');
+  };
+
+  fruitsImg.src = 'yumyum.png';
+
+  let potionImg = new Image();
+  let potionLoaded = false;
+  let POTION_WIDTH_ACTUAL = 32;
+  let POTION_HEIGHT_ACTUAL = 40;
+
+  potionImg.onload = ()=>{
+    potionLoaded = true;
+    POTION_WIDTH_ACTUAL = potionImg.width;
+    POTION_HEIGHT_ACTUAL = potionImg.height;
+    console.log(`✓ Potion loaded! Dimensions: ${potionImg.width}x${potionImg.height}`);
+  };
+
+  potionImg.onerror = ()=>{
+    console.error('✗ Potion failed to load from: potion.png');
+  };
+
+  potionImg.src = 'potion.png';
+
+  const SPRITE_WIDTH = 32;
+  const SPRITE_HEIGHT = 32;
+  const SPRITE_FRAMES = 8; // 8 frames in 4x2 grid
+  let spriteFrameIndex = 0;
+
+  const FRUIT_SPRITE_WIDTH = 32;
+  const FRUIT_SPRITE_HEIGHT = 32;
+  const FRUIT_TYPES_MAP = { strawberry: 0, apple: 1, peach: 2, grapes: 3, golden: 4 };
+
+  const stars = [];
+  function ensureStars(){
+    if(stars.length) return;
+    for(let i=0;i<70;i++){
+      stars.push({ x:Math.random(), y:Math.random()*0.75, r:0.6+Math.random()*1.6, ph:Math.random()*Math.PI*2, sp:0.6+Math.random()*1.4 });
+    }
+  }
+  const clouds = [];
+  function ensureClouds(){
+    if(clouds.length) return;
+    for(let i=0;i<5;i++){
+      clouds.push({ x:Math.random(), y:0.08+Math.random()*0.35, s:0.5+Math.random()*0.9, sp:2+Math.random()*4 });
+    }
+  }
+
+  function drawBackground(t){
+    const dark = isDark();
+    // sky gradient drawn via CSS already on #frame background; just add stars/clouds/moon on canvas
+    ensureStars(); ensureClouds();
+
+    // twinkling stars - retro 8-bit blocky style
+    for(const s of stars){
+      const alpha = dark ? (0.5+0.5*Math.abs(Math.sin(t*s.sp+s.ph))) : (0.3+0.5*Math.abs(Math.sin(t*s.sp+s.ph)));
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = dark ? '#ffff00' : '#ffff99';
+      const sx = s.x*W, sy = s.y*H;
+      // Draw blocky retro 8-bit stars
+      const size = s.r * (dark?3.2:2);
+      ctx.fillRect(sx-size/2, sy-size/2, size, size);
+    }
+    ctx.globalAlpha=1;
+
+    // moon / sun - retro blocky orb with glow
+    const orbX = W*0.85, orbY = H*0.14, orbR = 32;
+    ctx.fillStyle = dark ? '#ffff00' : '#ffdd00';
+    ctx.fillRect(orbX-orbR, orbY-orbR, orbR*2, orbR*2);
+
+    // Retro glow layers
+    ctx.globalAlpha = dark ? 0.4 : 0.3;
+    ctx.fillStyle = dark ? '#ffff88' : '#ffff00';
+    ctx.fillRect(orbX-orbR*1.3, orbY-orbR*1.3, orbR*2.6, orbR*2.6);
+
+    ctx.globalAlpha = dark ? 0.2 : 0.15;
+    ctx.fillStyle = '#ffff99';
+    ctx.fillRect(orbX-orbR*1.8, orbY-orbR*1.8, orbR*3.6, orbR*3.6);
+    ctx.globalAlpha = 1;
+
+    // drifting clouds - retro blocky style
+    ctx.globalAlpha = dark ? 0.2 : 0.7;
+    ctx.fillStyle = dark ? '#b8a8e8' : '#ffffee';
+    for(const c of clouds){
+      const cx = ((ambientT*0.008*c.sp + c.x) % 1.2 - 0.1) * W;
+      const cy = c.y*H;
+      const s = c.s*28;
+      // Draw retro blocky clouds with outline
+      ctx.fillRect(cx-s, cy-s*0.4, s*2, s*0.5);
+      ctx.fillRect(cx-s*1.3, cy, s*0.6, s*0.4);
+      ctx.fillRect(cx+s*0.7, cy, s*0.6, s*0.4);
+    }
+    ctx.globalAlpha=1;
+  }
+  function cloudPuff(x,y,s){
+    ctx.beginPath();
+    ctx.ellipse(x,y,s*1.3,s*0.7,0,0,Math.PI*2);
+    ctx.ellipse(x-s*0.9,y+s*0.15,s*0.8,s*0.55,0,0,Math.PI*2);
+    ctx.ellipse(x+s*0.9,y+s*0.1,s*0.9,s*0.6,0,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  function drawStarShape(cx,cy,rOuter,rInner,points,rot){
+    ctx.beginPath();
+    const step = Math.PI/points;
+    for(let i=0;i<points*2;i++){
+      const r = i%2===0? rOuter:rInner;
+      const a = i*step + rot;
+      const x = cx+Math.cos(a)*r, y = cy+Math.sin(a)*r;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+  }
+
+  function drawFruit(it){
+    ctx.save();
+    ctx.translate(it.x, it.y);
+    ctx.rotate(it.rot*0.3);
+    const bob = Math.sin(it.wobble)*2;
+    ctx.translate(0,bob);
+
+    // Draw fruit sprite if loaded
+    if(fruitsLoaded && fruitsImg.complete && fruitsImg.width > 0){
+      try{
+        const visualIdx = it.visualIndex || 0;
+        const fruitRow = Math.floor(visualIdx / 5); // 5 fruits per row
+        const fruitCol = visualIdx % 5;
+        const sourceX = fruitCol * FRUIT_SPRITE_WIDTH_ACTUAL;
+        const sourceY = fruitRow * FRUIT_SPRITE_HEIGHT_ACTUAL;
+        const scale = it.r / (FRUIT_SPRITE_WIDTH_ACTUAL / 2);
+        const drawWidth = FRUIT_SPRITE_WIDTH_ACTUAL * scale;
+        const drawHeight = FRUIT_SPRITE_HEIGHT_ACTUAL * scale;
+        ctx.drawImage(fruitsImg, sourceX, sourceY, FRUIT_SPRITE_WIDTH_ACTUAL, FRUIT_SPRITE_HEIGHT_ACTUAL,
+                      -drawWidth/2, -drawHeight/2, drawWidth, drawHeight);
+        ctx.restore();
+        return;
+      } catch(e){
+        console.error('Error drawing fruit sprite:', e);
+        fruitsLoaded = false;
+      }
+    }
+
+    // Fallback: Draw simple colored circle if sprite not loaded
+    ctx.globalAlpha=0.18; ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.ellipse(0, it.r*0.9, it.r*0.7, it.r*0.25, 0,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+
+    const colors = {
+      strawberry: '#ff6b7a',
+      apple: '#ff6347',
+      peach: '#ffb347',
+      grapes: '#9370db',
+      golden: '#ffd700'
+    };
+    ctx.fillStyle = colors[it.kind] || '#ff6b7a';
+    ctx.beginPath(); ctx.arc(0, 0, it.r, 0, Math.PI*2); ctx.fill();
+    ctx.lineWidth=2; ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawPotion(it){
+    ctx.save();
+    ctx.translate(it.x, it.y);
+    const wob = Math.sin(it.wobble)*0.08;
+    ctx.rotate(wob);
+
+    // Draw potion sprite if loaded
+    if(potionLoaded && potionImg.complete && potionImg.width > 0){
+      try{
+        const scale = it.r / (POTION_WIDTH_ACTUAL / 2);
+        const drawWidth = POTION_WIDTH_ACTUAL * scale;
+        const drawHeight = POTION_HEIGHT_ACTUAL * scale;
+        ctx.drawImage(potionImg, 0, 0, POTION_WIDTH_ACTUAL, POTION_HEIGHT_ACTUAL,
+                      -drawWidth/2, -drawHeight/2, drawWidth, drawHeight);
+        ctx.restore();
+        return;
+      } catch(e){
+        console.error('Error drawing potion sprite:', e);
+        potionLoaded = false;
+      }
+    }
+
+    // Fallback: Draw simple procedural potion
+    ctx.globalAlpha=0.18; ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.ellipse(0, it.r*1.0, it.r*0.7, it.r*0.22, 0,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+
+    const auraPulse = 0.5+0.5*Math.sin(ambientT*4);
+    const auraColor = it.kind==='green' ? '124,255,106' : '155,90,220';
+    const glow = ctx.createRadialGradient(0,0,4,0,0,it.r*2.4);
+    glow.addColorStop(0, `rgba(${auraColor},${0.28+0.15*auraPulse})`);
+    glow.addColorStop(1, `rgba(${auraColor},0)`);
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(0,0,it.r*2.4,0,Math.PI*2); ctx.fill();
+
+    const bw=it.r*1.15, bh=it.r*1.5;
+    ctx.fillStyle = '#3a2a55';
+    ctx.beginPath();
+    roundRectPath(-bw*0.55,-bh*0.15,bw*1.1,bh*1.05,6);
+    ctx.fill();
+    ctx.lineWidth=1.4; ctx.strokeStyle='#1c1230'; ctx.stroke();
+
+    const liquid = it.kind==='green'
+      ? ctx.createLinearGradient(0,-bh*0.1,0,bh*0.8)
+      : ctx.createLinearGradient(0,-bh*0.1,0,bh*0.8);
+    if(it.kind==='green'){ liquid.addColorStop(0,'#c9f27a'); liquid.addColorStop(1,'#5fae3a'); }
+    else{ liquid.addColorStop(0,'#c9a3ff'); liquid.addColorStop(1,'#5b2a86'); }
+    ctx.save();
+    ctx.beginPath(); roundRectPath(-bw*0.55,-bh*0.15,bw*1.1,bh*1.05,6); ctx.clip();
+    ctx.fillStyle = liquid;
+    ctx.fillRect(-bw, -bh*0.02, bw*2, bh*1.3);
+    ctx.fillStyle='rgba(255,255,255,0.55)';
+    for(let i=0;i<3;i++){
+      const bx = -bw*0.25 + i*bw*0.28;
+      const by = bh*0.8 - ((ambientT*40 + i*17) % (bh*0.9));
+      ctx.beginPath(); ctx.arc(bx,by, 2+ (i%2), 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+
+    ctx.fillStyle='#2a1d40';
+    ctx.fillRect(-bw*0.18,-bh*0.42,bw*0.36,bh*0.3);
+    ctx.fillStyle='#b98a4f';
+    ctx.fillRect(-bw*0.2,-bh*0.52,bw*0.4,bh*0.14);
+
+    ctx.fillStyle='rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.arc(0,bh*0.28,it.r*0.22,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle= it.kind==='green' ? '#2f6a1f' : '#3a1f66';
+    ctx.beginPath(); ctx.arc(-it.r*0.09,bh*0.26,it.r*0.045,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(it.r*0.09,bh*0.26,it.r*0.045,0,Math.PI*2); ctx.fill();
+    ctx.fillRect(-it.r*0.05,bh*0.31,it.r*0.1,it.r*0.06);
+
+    ctx.restore();
+  }
+  function roundRectPath(x,y,w,h,r){
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+  }
+
+  function drawStarItem(it){
+    ctx.save();
+    ctx.translate(it.x,it.y);
+    const pulse = 1+0.12*Math.sin(ambientT*6);
+    const glow = ctx.createRadialGradient(0,0,2,0,0,it.r*2.6);
+    glow.addColorStop(0,'rgba(255,207,86,0.55)'); glow.addColorStop(1,'rgba(255,207,86,0)');
+    ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(0,0,it.r*2.6,0,Math.PI*2); ctx.fill();
+    ctx.rotate(it.rot);
+    ctx.fillStyle='#ffcf56';
+    drawStarShape(0,0,it.r*pulse,it.r*0.42,5,-Math.PI/2);
+    ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.8)';
+    drawStarShape(0,0,it.r*0.4*pulse,it.r*0.16,5,-Math.PI/2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawParticle(p){
+    const lifeT = p.life/p.maxLife;
+    ctx.globalAlpha = Math.max(0,1-lifeT);
+    ctx.fillStyle = p.color;
+    ctx.save();
+    ctx.translate(p.x,p.y);
+    ctx.rotate(p.rot);
+    if(p.shape==='star'){
+      drawStarShape(0,0,p.size,p.size*0.42,4,0);
+      ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.arc(0,0,p.size*(1-lifeT*0.3),0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha=1;
+  }
+
+  function drawPlayer(){
+    if(player.dying>0){
+      ctx.save();
+      const t = 1-player.dying;
+      ctx.translate(player.x,player.y);
+      ctx.globalAlpha = Math.max(0, player.dying);
+      ctx.rotate(t*Math.PI*3);
+      ctx.scale(1-t*0.7,1-t*0.7);
+      drawPlayerSprite(0, 0);
+      ctx.restore();
+      ctx.globalAlpha=1;
+      return;
+    }
+    const blinking = player.invuln>0 && Math.floor(player.invuln*10)%2===0;
+    if(blinking) ctx.globalAlpha=0.4;
+
+    // shield aura
+    if(player.shield>0){
+      ctx.save();
+      ctx.translate(player.x,player.y);
+      const pulse = 1+0.1*Math.sin(ambientT*8);
+      const grad = ctx.createRadialGradient(0,0,player.r*0.6,0,0,player.r*2.1*pulse);
+      grad.addColorStop(0,'rgba(255,207,86,0.05)');
+      grad.addColorStop(0.7,'rgba(255,207,86,0.28)');
+      grad.addColorStop(1,'rgba(255,207,86,0)');
+      ctx.fillStyle=grad;
+      ctx.beginPath(); ctx.arc(0,0,player.r*2.1*pulse,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(player.x, player.y + Math.sin(player.bob*5)*2.2);
+    ctx.scale(player.facing,1);
+    drawPlayerSprite(0, 0);
+    ctx.restore();
+
+    if(player.hitFlash>0){
+      ctx.save();
+      ctx.globalAlpha = player.hitFlash*0.5;
+      ctx.fillStyle='#ff3b6e';
+      ctx.beginPath(); ctx.arc(player.x,player.y,player.r*1.6,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  function drawPlayerSprite(offsetX, offsetY){
+    const scale = 3.2; // Scale for character sprite - bold retro style
+    const drawWidth = SPRITE_WIDTH_ACTUAL * scale;
+    const drawHeight = SPRITE_HEIGHT_ACTUAL * scale;
+
+    // Draw character if loaded
+    if(spriteLoaded && spriteImg.complete && spriteImg.width > 0){
+      try{
+        ctx.drawImage(spriteImg, 0, 0, SPRITE_WIDTH_ACTUAL, SPRITE_HEIGHT_ACTUAL,
+                      offsetX - drawWidth/2, offsetY - drawHeight/2, drawWidth, drawHeight);
+        return;
+      } catch(e){
+        console.error('Error drawing character:', e);
+        spriteLoaded = false;
+      }
+    }
+
+    // Fallback: Draw simple placeholder (only if sprite failed to load)
+    if(!spriteLoaded){
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#000';
+      ctx.fillStyle = '#ff6b9d';
+      ctx.beginPath();
+      ctx.arc(offsetX, offsetY - 25, 20, 0, Math.PI*2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#c71585';
+      ctx.fillRect(offsetX - 20, offsetY, 40, 30);
+      ctx.strokeRect(offsetX - 20, offsetY, 40, 30);
+
+      ctx.fillStyle = '#ff8fa0';
+      ctx.fillRect(offsetX - 18, offsetY - 10, 12, 12);
+      ctx.fillRect(offsetX + 6, offsetY - 10, 12, 12);
+    }
+  }
+
+
+  // custom cursor (small wand sparkle) drawn on canvas when pointer is dragging — otherwise hidden
+  function draw(){
+    if(!ctx || !canvas) return;
+
+    ctx.clearRect(0,0,W,H);
+    drawBackground(ambientT);
+
+    // Debug: If no items spawned, spawn one to test rendering
+    if(state === STATE.PLAY && items.length === 0 && elapsed > 0.5){
+      spawnItem();
+    }
+
+    for(const it of items){
+      if(it.type==='fruit') drawFruit(it);
+      else if(it.type==='potion') drawPotion(it);
+      else if(it.type==='star') drawStarItem(it);
+    }
+
+    drawPlayer();
+
+    for(const p of particles) drawParticle(p);
+  }
+
+  function pixelateCanvas(customSize){
+    try{
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      const pixelBlockSize = Math.max(1, Math.round((customSize || PIXEL_SIZE) * DPR));
+
+      for(let y = 0; y < canvas.height; y += pixelBlockSize){
+        for(let x = 0; x < canvas.width; x += pixelBlockSize){
+          let r = 0, g = 0, b = 0, a = 0, count = 0;
+
+          for(let py = 0; py < pixelBlockSize && y + py < canvas.height; py++){
+            for(let px = 0; px < pixelBlockSize && x + px < canvas.width; px++){
+              const idx = (canvas.width * (y + py) + x + px) * 4;
+              if(idx + 3 < data.length){
+                r += data[idx];
+                g += data[idx + 1];
+                b += data[idx + 2];
+                a += data[idx + 3];
+                count++;
+              }
+            }
+          }
+
+          if(count > 0){
+            r = Math.round(r / count);
+            g = Math.round(g / count);
+            b = Math.round(b / count);
+            a = Math.round(a / count);
+
+            for(let py = 0; py < pixelBlockSize && y + py < canvas.height; py++){
+              for(let px = 0; px < pixelBlockSize && x + px < canvas.width; px++){
+                const idx = (canvas.width * (y + py) + x + px) * 4;
+                if(idx + 3 < data.length){
+                  data[idx] = r;
+                  data[idx + 1] = g;
+                  data[idx + 2] = b;
+                  data[idx + 3] = a;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+    } catch(e){
+      console.log('Pixelation error:', e);
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Main loop
+  // ---------------------------------------------------------------
+  let lastT = performance.now();
+  function frameLoop(now){
+    let dt = (now-lastT)/1000;
+    lastT = now;
+    dt = Math.min(dt, 0.05);
+    update(dt);
+    draw();
+    requestAnimationFrame(frameLoop);
+  }
+
+  resize();
+  updateHUD();
+  document.getElementById('best-val').textContent = 'Best ' + bestScore;
+  console.log('Game initialized - Canvas size:', W, 'x', H, 'DPR:', DPR);
+  console.log('Sprite loaded:', spriteLoaded, 'Fruits loaded:', fruitsLoaded);
+  requestAnimationFrame(frameLoop);
+})();
+</script>
+</body>
+</html>
