@@ -1430,7 +1430,7 @@
   // match the crisp pixel-art sprite sheets instead of looking smooth/vector.
   const PIXEL_ART_SCALE = 3; // base pixelation block size (logical CSS px per block)
   const CHARACTER_PIXEL_SCALE = 2; // smaller = crisper — keep the player readable
-  const ITEM_PIXEL_SCALE = 15; // fruit sprites + potion (not the orange slice) — chunkier retro sprite look
+  const ITEM_PIXEL_SCALE = 50; // fruit sprites + potion (not the orange slice) — chunkier retro sprite look
   const BG_PIXEL_SCALE = 5; // sky/ground — chunkier retro sprite look
   const pixelBufCache = {};
   // cacheKey (mobile perf): items like fruit/potion/orange-slice art never
@@ -1441,8 +1441,10 @@
   // on screen. Weaker mobile GPUs feel this most once the screen gets busy.
   function drawPixelated(g, cx, cy, halfW, halfH, drawFn, scale, cacheKey){
     scale = scale || PIXEL_ART_SCALE;
-    const bw = Math.max(1, Math.round((halfW*2)/scale));
-    const bh = Math.max(1, Math.round((halfH*2)/scale));
+    // floor of 4: below that the buffer collapses to 1-2 solid squares and the
+    // shape/color pattern that makes a fruit or potion recognizable is gone.
+    const bw = Math.max(4, Math.round((halfW*2)/scale));
+    const bh = Math.max(4, Math.round((halfH*2)/scale));
     const key = cacheKey ? ('k:'+cacheKey) : (bw+'x'+bh);
     let buf = pixelBufCache[key];
     const isNew = !buf;
